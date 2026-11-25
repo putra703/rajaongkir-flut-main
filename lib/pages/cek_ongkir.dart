@@ -54,6 +54,21 @@ class _CekOngkirScreenState extends State<CekOngkirScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (provider.errorMessage != null) ...[
+                  Container(
+                    width: double.infinity,
+                    margin: EdgeInsets.only(bottom: 16),
+                    padding: EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red[50],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      provider.errorMessage!,
+                      style: TextStyle(color: Colors.red[900]),
+                    ),
+                  ),
+                ],
                 _buildOriginSection(provider),
                 SizedBox(height: 24),
                 Divider(),
@@ -169,6 +184,14 @@ class _CekOngkirScreenState extends State<CekOngkirScreen> {
           filterFn: (item, filter) =>
               item.fullName.toLowerCase().contains(filter.toLowerCase()),
         ),
+        SizedBox(height: 12),
+        _buildDistrictDropdown(
+          districts: provider.originDistricts,
+          selectedDistrict: provider.selectedOriginDistrict,
+          isLoading: provider.isLoadingOriginDistricts,
+          label: 'Kecamatan Asal',
+          onChanged: provider.setOriginDistrict,
+        ),
       ],
     );
   }
@@ -267,7 +290,54 @@ class _CekOngkirScreenState extends State<CekOngkirScreen> {
           filterFn: (item, filter) =>
               item.fullName.toLowerCase().contains(filter.toLowerCase()),
         ),
+        SizedBox(height: 12),
+        _buildDistrictDropdown(
+          districts: provider.destinationDistricts,
+          selectedDistrict: provider.selectedDestDistrict,
+          isLoading: provider.isLoadingDestDistricts,
+          label: 'Kecamatan Tujuan',
+          onChanged: provider.setDestDistrict,
+        ),
       ],
+    );
+  }
+
+  Widget _buildDistrictDropdown({
+    required List<City> districts,
+    required City? selectedDistrict,
+    required bool isLoading,
+    required String label,
+    required ValueChanged<City?> onChanged,
+  }) {
+    return DropdownSearch<City>(
+      items: districts,
+      selectedItem: selectedDistrict,
+      enabled: districts.isNotEmpty && !isLoading,
+      onChanged: onChanged,
+      dropdownDecoratorProps: DropDownDecoratorProps(
+        dropdownSearchDecoration: InputDecoration(
+          labelText: isLoading ? 'Memuat $label...' : label,
+          border: OutlineInputBorder(),
+          prefixIcon: Icon(Icons.place),
+        ),
+      ),
+      popupProps: PopupProps.modalBottomSheet(
+        showSearchBox: true,
+        searchFieldProps: TextFieldProps(
+          decoration: InputDecoration(
+            hintText: 'Cari kecamatan...',
+            prefixIcon: Icon(Icons.search),
+            border: OutlineInputBorder(),
+          ),
+        ),
+        itemBuilder: (context, item, isSelected) => ListTile(
+          title: Text(item.fullName),
+          subtitle: Text('Kode Pos: ${item.zipCode}'),
+          selected: isSelected,
+        ),
+      ),
+      filterFn: (item, filter) =>
+          item.fullName.toLowerCase().contains(filter.toLowerCase()),
     );
   }
 

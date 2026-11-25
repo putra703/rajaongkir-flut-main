@@ -5,7 +5,7 @@ import '../models/city.dart';
 import '../models/cost.dart';
 
 class RajaOngkirService {
-  static const String _apiKey = 'API_KEY';
+  static const String _apiKey = String.fromEnvironment('RAJAONGKIR_API_KEY');
   static const String _baseUrl =
       'https://rajaongkir.komerce.id/api/v1/destination';
 
@@ -14,7 +14,7 @@ class RajaOngkirService {
     try {
       final response = await http.get(
         Uri.parse('$_baseUrl/province'),
-        headers: {'key': _apiKey},
+        headers: {'key': _requireApiKey()},
       );
 
       if (response.statusCode == 200) {
@@ -38,7 +38,7 @@ class RajaOngkirService {
     try {
       final response = await http.get(
         Uri.parse('$_baseUrl/city/$provinceId'),
-        headers: {'key': _apiKey},
+        headers: {'key': _requireApiKey()},
       );
 
       if (response.statusCode == 200) {
@@ -51,6 +51,27 @@ class RajaOngkirService {
       } else {
         throw Exception('Failed to load cities');
       }
+    } catch (e) {
+      throw Exception('Error: $e');
+    }
+  }
+
+  // Get districts by city. The district ID is required by the cost endpoint.
+  Future<List<City>> getDistricts(String cityId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/district/$cityId'),
+        headers: {'key': _requireApiKey()},
+      );
+
+      if (response.statusCode == 200) {
+        final decoded = json.decode(response.body) as Map<String, dynamic>;
+        final results = decoded['data'] as List<dynamic>;
+        return results
+            .map((item) => City.fromJson(item as Map<String, dynamic>))
+            .toList();
+      }
+      throw Exception('Gagal memuat kecamatan: ${response.statusCode}');
     } catch (e) {
       throw Exception('Error: $e');
     }
@@ -70,7 +91,7 @@ class RajaOngkirService {
       final response = await http.post(
         Uri.parse(_costUrl),
         headers: {
-          'key': _apiKey,
+          'key': _requireApiKey(),
           'Content-Type': 'application/x-www-form-urlencoded',
         },
         body: {
@@ -85,9 +106,6 @@ class RajaOngkirService {
         },
       );
 
-      print('Status code (cost): ${response.statusCode}');
-      print('Body (cost): ${response.body}');
-
       if (response.statusCode == 200) {
         final decoded = json.decode(response.body) as Map<String, dynamic>;
         final results = decoded['data'] as List<dynamic>;
@@ -100,10 +118,21 @@ class RajaOngkirService {
 
         return options;
       } else {
-        throw Exception('Failed to check cost: ${response.statusCode}');
+        throw Exception(
+          'Gagal mengecek ongkir (${response.statusCode}): ${response.body}',
+        );
       }
     } catch (e) {
       throw Exception('Error: $e');
     }
+  }
+
+  String _requireApiKey() {
+    if (_apiKey.isEmpty || _apiKey == 'API_KEY') {
+      throw Exception(
+        'API key belum diatur. Jalankan dengan --dart-define=RAJAONGKIR_API_KEY=API_KEY_ANDA.',
+      );
+    }
+    return _apiKey;
   }
 }

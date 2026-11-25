@@ -1,4 +1,5 @@
 import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart';
 import 'dart:convert';
 import '../models/province.dart';
 import '../models/city.dart';
@@ -6,15 +7,22 @@ import '../models/cost.dart';
 
 class RajaOngkirService {
   static const String _apiKey = String.fromEnvironment('RAJAONGKIR_API_KEY');
-  static const String _baseUrl =
-      'https://rajaongkir.komerce.id/api/v1/destination';
+  static const String _apiBaseUrl = 'https://rajaongkir.komerce.id/api/v1';
+
+  Uri _uri(String path) => kIsWeb
+      ? Uri.parse('http://localhost:8080/api/$path')
+      : Uri.parse('$_apiBaseUrl/$path');
+
+  Map<String, String> get _headers => kIsWeb
+      ? const {}
+      : {'key': _requireApiKey()};
 
   // Get all provinces
   Future<List<Province>> getProvinces() async {
     try {
       final response = await http.get(
-        Uri.parse('$_baseUrl/province'),
-        headers: {'key': _requireApiKey()},
+        _uri('destination/province'),
+        headers: _headers,
       );
 
       if (response.statusCode == 200) {
@@ -37,8 +45,8 @@ class RajaOngkirService {
   Future<List<City>> getCities(String provinceId) async {
     try {
       final response = await http.get(
-        Uri.parse('$_baseUrl/city/$provinceId'),
-        headers: {'key': _requireApiKey()},
+        _uri('destination/city/$provinceId'),
+        headers: _headers,
       );
 
       if (response.statusCode == 200) {
@@ -60,8 +68,8 @@ class RajaOngkirService {
   Future<List<City>> getDistricts(String cityId) async {
     try {
       final response = await http.get(
-        Uri.parse('$_baseUrl/district/$cityId'),
-        headers: {'key': _requireApiKey()},
+        _uri('destination/district/$cityId'),
+        headers: _headers,
       );
 
       if (response.statusCode == 200) {
@@ -78,9 +86,6 @@ class RajaOngkirService {
   }
 
   // Check shipping cost
-  static const String _costUrl =
-      'https://rajaongkir.komerce.id/api/v1/calculate/district/domestic-cost';
-
   Future<List<ShippingCost>> checkCost({
     required String origin,
     required String destination,
@@ -89,10 +94,10 @@ class RajaOngkirService {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse(_costUrl),
+        _uri('calculate/district/domestic-cost'),
         headers: {
-          'key': _requireApiKey(),
           'Content-Type': 'application/x-www-form-urlencoded',
+          ..._headers,
         },
         body: {
           'origin': origin,
